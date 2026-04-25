@@ -21,8 +21,17 @@ function scoreToColor(score) {
   return '#ef4444'
 }
 
-// Natural Earth 50m uses properties.ADM0_A3 for ISO-3
-const getIso = (feature) => feature?.properties?.ADM0_A3 || null
+// Natural Earth uses non-standard codes for a handful of countries
+const ISO_REMAP = {
+  'SDS': 'SSD',  // South Sudan
+  'SOL': 'SOM',  // Somaliland → treat as Somalia (or just exclude)
+  'KAB': 'KAB',  // Kabinda (exclave of Angola — no ISO, can ignore)
+}
+
+const getIso = (feature) => {
+  const raw = feature?.properties?.ADM0_A3 || null
+  return ISO_REMAP[raw] || raw
+}
 
 function GoalFilter({ selectedGoal, onSelect }) {
   return (
