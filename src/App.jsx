@@ -37,8 +37,8 @@ export default function App() {
         fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)',
         maxWidth: '1400px', margin: '0 auto',
       }}>
-        <span>Africa SDG Scorecard — Built by Eric Njiraini · Data: WHO, FAO, World Bank, UNSD, UNESCO, UNFCCC</span>
-        <span>For informational purposes only · Not affiliated with the United Nations</span>
+        <span>Africa SDG Scorecard — Built by <a href="https://ericnjiraini.github.io/me/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'none' }}>Eric Njiraini</a> · Data: WHO, FAO, World Bank, UNSD, UNESCO, UNFCCC</span>
+        <span>For informational purposes only 💠 Not affiliated with the United Nations</span>
       </footer>
     </div>
   )

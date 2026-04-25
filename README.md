@@ -26,6 +26,7 @@ All data is open-licensed and sourced from:
 
 ## Tech Stack
 - React 19 + Vite
+- Python
 - Tailwind CSS v4
 - Recharts
 - GitHub Pages (deployment)
@@ -51,4 +52,4 @@ npm run dev
 Push to `main` branch — GitHub Actions builds and deploys automatically.
 
 ---
-Built by [Eric Njiraini](https://ericnjiraini.github.io/me) · For informational purposes only · Not affiliated with the United Nations
+Built by [Eric Njiraini](https://ericnjiraini.github.io/me) 💠 For informational purposes only 💠 Not affiliated with the United Nations
