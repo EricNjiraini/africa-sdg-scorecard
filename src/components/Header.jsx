@@ -5,6 +5,7 @@ export default function Header({ activeTab, setActiveTab }) {
     { id: 'overview',   label: '◉ Overview' },
     { id: 'table',      label: '≡ Scorecard' },
     { id: 'charts',     label: '⌗ Charts' },
+    { id: 'map',        label: '🗺 Map' },
     { id: 'country',    label: '⊞ Country Deep-Dive' },
     { id: 'analysis',   label: '◈ Analysis' },
     { id: 'sources',    label: '⊙ Sources' },

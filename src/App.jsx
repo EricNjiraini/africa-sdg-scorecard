@@ -5,6 +5,7 @@ import Scorecard from './components/Scorecard'
 import Charts from './components/Charts'
 import CountryDeepDive from './components/CountryDeepDive'
 import Analysis from './components/Analysis'
+import MapView from './components/MapView'
 import Sources from './components/Sources'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
       case 'overview':  return <Overview setActiveTab={setActiveTab} setSelectedCountry={setSelectedCountry} />
       case 'table':     return <Scorecard setActiveTab={setActiveTab} setSelectedCountry={setSelectedCountry} />
       case 'charts':    return <Charts />
+      case 'map':       return <MapView setActiveTab={setActiveTab} setSelectedCountry={setSelectedCountry} />
       case 'country':   return <CountryDeepDive selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} />
       case 'analysis':  return <Analysis />
       case 'sources':   return <Sources />
