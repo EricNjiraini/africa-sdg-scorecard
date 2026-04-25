@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { countries, SDG_GOALS, getStatusColor } from '../data/sdgData'
+import { countries, SDG_GOALS } from '../data/sdgData'
 
 const countryByIso = Object.fromEntries(countries.map(c => [c.iso, c]))
-
 const AFRICA_ISOS = new Set(countries.map(c => c.iso))
 
 const STATUS_LEGEND = [
@@ -21,6 +20,9 @@ function scoreToColor(score) {
   if (score >= 40) return '#f97316'
   return '#ef4444'
 }
+
+// Natural Earth 50m uses properties.ADM0_A3 for ISO-3
+const getIso = (feature) => feature?.properties?.ADM0_A3 || null
 
 function GoalFilter({ selectedGoal, onSelect }) {
   return (
@@ -76,16 +78,15 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
 
   const getColor = (iso) => scoreToColor(getScore(iso))
 
-  // Fetch GeoJSON — johan/world.geo.json uses feature.id = ISO-3 directly
+  // Natural Earth 50m — accurate borders, ADM0_A3 property for ISO-3
   useEffect(() => {
-    setStatus('Loading map data…')
-    fetch('https://cdn.jsdelivr.net/gh/johan/world.geo.json@master/countries.geo.json')
+    fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_countries.geojson')
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
       })
       .then(world => {
-        const africaFeatures = world.features.filter(f => AFRICA_ISOS.has(f.id))
+        const africaFeatures = world.features.filter(f => AFRICA_ISOS.has(getIso(f)))
         if (africaFeatures.length === 0) throw new Error('No Africa features found')
         setGeoData({ type: 'FeatureCollection', features: africaFeatures })
         setStatus(null)
@@ -97,7 +98,7 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
       })
   }, [])
 
-  // Draw/redraw map
+  // Draw map
   useEffect(() => {
     if (!geoData || !svgRef.current || !containerRef.current) return
 
@@ -107,13 +108,11 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
     svg.attr('width', width).attr('height', height)
-      .style('background', 'var(--bg-card)')
 
     const projection = d3.geoMercator()
       .fitExtent([[20, 20], [width - 20, height - 20]], geoData)
 
     const path = d3.geoPath().projection(projection)
-
     const g = svg.append('g')
 
     // Zoom
@@ -127,13 +126,14 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
       .data(geoData.features)
       .join('path')
       .attr('d', path)
-      .attr('fill', d => getColor(d.id))
+      .attr('fill', d => getColor(getIso(d)))
       .attr('stroke', 'var(--bg-primary)')
-      .attr('stroke-width', 0.7)
+      .attr('stroke-width', 0.6)
       .style('cursor', 'pointer')
       .on('mousemove', (event, d) => {
-        const c = countryByIso[d.id]
-        setHoveredCountry(c || { name: d.id, flag: '🌍', region: '—', sdgScore: null, iso: d.id })
+        const iso = getIso(d)
+        const c = countryByIso[iso]
+        if (c) setHoveredCountry(c)
         d3.select(event.currentTarget)
           .attr('stroke', 'var(--accent-cyan)')
           .attr('stroke-width', 1.5)
@@ -143,10 +143,10 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
         setHoveredCountry(null)
         d3.select(event.currentTarget)
           .attr('stroke', 'var(--bg-primary)')
-          .attr('stroke-width', 0.7)
+          .attr('stroke-width', 0.6)
       })
       .on('click', (event, d) => {
-        const c = countryByIso[d.id]
+        const c = countryByIso[getIso(d)]
         if (c) {
           setSelectedCountry(c)
           setActiveTab('country')
@@ -154,9 +154,9 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
       })
 
     // Labels for larger countries
-    const LABEL_ISOS = new Set(['NGA','ETH','COD','DZA','ZAF','EGY','SDN','TZA','KEN','MAR','MOZ','AGO','MLI','NER','TCD','MRT','ZMB','MDG'])
+    const LABEL_ISOS = new Set(['NGA','ETH','COD','DZA','ZAF','EGY','SDN','SSD','TZA','KEN','MAR','MOZ','AGO','MLI','NER','TCD','MRT','ZMB','MDG'])
     g.selectAll('text')
-      .data(geoData.features.filter(d => LABEL_ISOS.has(d.id)))
+      .data(geoData.features.filter(d => LABEL_ISOS.has(getIso(d))))
       .join('text')
       .attr('transform', d => `translate(${path.centroid(d)})`)
       .attr('text-anchor', 'middle')
@@ -166,9 +166,8 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
       .attr('fill', '#e8f0fa')
       .attr('opacity', 0.6)
       .attr('pointer-events', 'none')
-      .text(d => countryByIso[d.id]?.name?.split(' ')[0] || '')
+      .text(d => countryByIso[getIso(d)]?.name?.split(' ')[0] || '')
 
-    // Hint text
     svg.append('text')
       .attr('x', width - 10).attr('y', height - 8)
       .attr('text-anchor', 'end')
@@ -180,12 +179,12 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
 
   }, [geoData])
 
-  // Smooth color transition when goal changes
+  // Recolor on goal change without full redraw
   useEffect(() => {
     if (!svgRef.current || !geoData) return
     d3.select(svgRef.current).selectAll('path')
       .transition().duration(350)
-      .attr('fill', d => getColor(d.id))
+      .attr('fill', d => getColor(getIso(d)))
   }, [selectedGoal, geoData])
 
   const selectedGoalObj = SDG_GOALS.find(g => g.id === selectedGoal)
@@ -234,7 +233,9 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
               color: loadError ? 'var(--red)' : 'var(--text-muted)',
               fontFamily: 'var(--font-mono)', fontSize: '12px',
             }}>
-              {!loadError && <div style={{ fontSize: '20px', color: 'var(--accent-cyan)', animation: 'spin 1.5s linear infinite' }}>◌</div>}
+              {!loadError && (
+                <div style={{ fontSize: '20px', color: 'var(--accent-cyan)', animation: 'spin 1.5s linear infinite' }}>◌</div>
+              )}
               {status}
             </div>
           )}
@@ -251,7 +252,7 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
             </div>
             {STATUS_LEGEND.map(s => (
               <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '7px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: s.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }} />
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: s.color, flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--text-primary)' }}>{s.label}</div>
                   {s.min !== null && (
@@ -287,9 +288,9 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
             })}
           </div>
 
-          {/* Hover info */}
+          {/* Hovered country card */}
           {hoveredCountry && (
-            <div className="card" style={{ padding: '14px', borderColor: `${scoreToColor(hoveredCountry.sdgScore)}50`, transition: 'all 0.15s' }}>
+            <div className="card" style={{ padding: '14px', borderColor: `${scoreToColor(hoveredCountry.sdgScore)}50`, transition: 'border-color 0.15s' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '22px' }}>{hoveredCountry.flag}</span>
                 <div>
@@ -305,11 +306,9 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
               <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 {selectedGoal ? `SDG ${selectedGoal} score` : 'overall score'}
               </div>
-              {countryByIso[hoveredCountry.iso] && (
-                <div style={{ marginTop: '8px', fontSize: '9px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
-                  click to open →
-                </div>
-              )}
+              <div style={{ marginTop: '8px', fontSize: '9px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                click to open →
+              </div>
             </div>
           )}
         </div>
@@ -317,8 +316,8 @@ export default function MapView({ setActiveTab, setSelectedCountry }) {
 
       {/* Note */}
       <div style={{ padding: '12px 16px', background: 'rgba(75,85,99,0.1)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-        <strong style={{ color: 'var(--text-secondary)' }}>Map Note:</strong> Dark countries have no data in the dataset.
-        Scroll to zoom · drag to pan · click any country to open its deep-dive.
+        <strong style={{ color: 'var(--text-secondary)' }}>Map Note:</strong> Borders from Natural Earth 1:50m.
+        Dark countries have no data in the dataset. Scroll to zoom · drag to pan · click any country for its deep-dive.
         Thresholds: ≥70 On Track · 55–69 Moderate · 40–54 At Risk · &lt;40 Off Track.
       </div>
 
