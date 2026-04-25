@@ -1,12 +1,13 @@
-import { countries, SDG_GOALS, getStatusColor } from '../data/sdgData'
+import { countries, SDG_GOALS, getStatusColor, getStatusLabel, getFastestMovers, getFastestDeclining, getGoalTrendBreakdown } from '../data/sdgData'
 
 function InsightBox({ color, icon, title, children }) {
   return (
     <div style={{
-      borderLeft: `3px solid ${color}`, borderRadius: '0 8px 8px 0',
-      background: `${color}0d`, border: `1px solid ${color}30`,
       borderLeft: `3px solid ${color}`,
-      padding: '16px 20px', marginBottom: '12px',
+      background: `${color}0d`,
+      border: `1px solid ${color}30`,
+      borderLeft: `3px solid ${color}`,
+      padding: '16px 20px', marginBottom: '12px', borderRadius: '0 8px 8px 0',
     }}>
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color, marginBottom: '6px', fontSize: '14px' }}>
         {icon} {title}
@@ -16,13 +17,78 @@ function InsightBox({ color, icon, title, children }) {
   )
 }
 
+function MoverCard({ country, label, color, slopeKey }) {
+  const slopes = Object.values(country.goals || {})
+    .map(g => g.trendSlope).filter(s => s != null)
+  const avg = slopes.length ? (slopes.reduce((a, b) => a + b, 0) / slopes.length).toFixed(2) : '—'
+  const status = country.sdgScore >= 70 ? 'green' : country.sdgScore >= 55 ? 'yellow' : country.sdgScore >= 40 ? 'orange' : 'red'
+
+  return (
+    <div className="card" style={{ padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <span style={{ fontSize: '28px' }}>{country.flag}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>{country.name}</div>
+        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{country.region}</div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '18px', fontWeight: 700, color: getStatusColor(status) }}>
+          {country.sdgScore}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color }}>
+          {avg > 0 ? '+' : ''}{avg} pts/yr
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GoalTrendBar({ goal }) {
+  // Safe fallback if function doesn't exist yet (before Phase 3 data is loaded)
+  const breakdown = typeof getGoalTrendBreakdown === 'function'
+    ? getGoalTrendBreakdown(goal.id)
+    : { improving: 0, stable: 0, worsening: 0, noData: 0 }
+
+  const total = breakdown.improving + breakdown.stable + breakdown.worsening + (breakdown.noData || 0)
+  const pctI = total ? ((breakdown.improving / total) * 100).toFixed(0) : 0
+  const pctS = total ? ((breakdown.stable / total) * 100).toFixed(0) : 0
+  const pctW = total ? ((breakdown.worsening / total) * 100).toFixed(0) : 0
+
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>{goal.icon}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{goal.label}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', fontFamily: 'var(--font-mono)', fontSize: '10px' }}>
+          <span style={{ color: 'var(--green)' }}>↑{pctI}%</span>
+          <span style={{ color: 'var(--text-muted)' }}>→{pctS}%</span>
+          <span style={{ color: 'var(--red)' }}>↓{pctW}%</span>
+        </div>
+      </div>
+      {/* Stacked bar */}
+      <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
+        <div style={{ width: `${pctI}%`, background: 'var(--green)',       transition: 'width 0.6s' }} />
+        <div style={{ width: `${pctS}%`, background: 'var(--text-muted)', opacity: 0.4, transition: 'width 0.6s' }} />
+        <div style={{ width: `${pctW}%`, background: 'var(--red)',         transition: 'width 0.6s' }} />
+      </div>
+    </div>
+  )
+}
+
 export default function Analysis() {
-  // Find best/worst per goal
+  // Safe fallbacks for when real data isn't loaded yet
+  const movers   = typeof getFastestMovers   === 'function' ? getFastestMovers(5)   : []
+  const decliners = typeof getFastestDeclining === 'function' ? getFastestDeclining(5) : []
+
+  // Per-goal insight table (works on both sample and real data)
   const goalInsights = SDG_GOALS.map(goal => {
-    const withData = countries.filter(c => c.goals[goal.id])
-    const best = [...withData].sort((a, b) => b.goals[goal.id].score - a.goals[goal.id].score)[0]
+    const withData = countries.filter(c => c.goals && c.goals[goal.id])
+    const best  = [...withData].sort((a, b) => b.goals[goal.id].score - a.goals[goal.id].score)[0]
     const worst = [...withData].sort((a, b) => a.goals[goal.id].score - b.goals[goal.id].score)[0]
-    const avg = +(withData.reduce((s, c) => s + c.goals[goal.id].score, 0) / withData.length).toFixed(1)
+    const avg   = withData.length
+      ? +(withData.reduce((s, c) => s + c.goals[goal.id].score, 0) / withData.length).toFixed(1)
+      : 0
     const improving = withData.filter(c => c.goals[goal.id].trend === 'improving').length
     return { goal, best, worst, avg, improving, total: withData.length }
   })
@@ -32,7 +98,7 @@ export default function Analysis() {
 
       {/* Macro overview */}
       <div className="card" style={{ padding: '24px' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '20px', marginBottom: '16px', color: 'var(--text-primary)' }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '20px', marginBottom: '16px' }}>
           🌍 Africa's SDG Journey — 2015 to 2025
         </h2>
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: '12px' }}>
@@ -43,23 +109,67 @@ export default function Analysis() {
           have reversed or stalled progress on hunger, poverty, and economic growth in several countries.
         </p>
         <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-          With just five years remaining, the continent needs to roughly triple its pace of progress on most indicators
-          to reach 2030 targets. The data gap itself is a governance challenge: nearly 120 SDG indicators still
-          lack sufficient country-level data across Africa, making monitoring — and therefore accountability —
-          structurally limited.
+          With just five years remaining, the continent needs to roughly triple its pace of progress on most
+          indicators to reach 2030 targets. The data gap itself is a governance challenge: nearly 120 SDG
+          indicators still lack sufficient country-level data across Africa, making monitoring — and therefore
+          accountability — structurally limited.
         </p>
       </div>
 
-      {/* Key trends */}
+      {/* Phase 3: Fastest movers + decliners */}
+      {(movers.length > 0 || decliners.length > 0) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                ▲ Fastest Improving — Trend Leaders
+              </h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Highest average score improvement per year (all goals)
+              </p>
+            </div>
+            <div style={{ padding: '10px' }}>
+              {movers.map((c, i) => <MoverCard key={c.iso} country={c} color="var(--green)" />)}
+            </div>
+          </div>
+
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                ▼ Fastest Declining — Needs Attention
+              </h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Highest average score deterioration per year (all goals)
+              </p>
+            </div>
+            <div style={{ padding: '10px' }}>
+              {decliners.map((c, i) => <MoverCard key={c.iso} country={c} color="var(--red)" />)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 3: Goal trend breakdown */}
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', marginBottom: '4px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Trend Breakdown by SDG Goal
+        </h3>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          % of countries improving / stable / worsening per goal (linear regression, 2015–2023)
+        </p>
+        {SDG_GOALS.map(goal => <GoalTrendBar key={goal.id} goal={goal} />)}
+      </div>
+
+      {/* Narrative insights */}
       <div>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '16px', marginBottom: '16px', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '16px', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>
           📈 Key Trends
         </h3>
         <InsightBox color="var(--green)" icon="⚡" title="Clean Energy — The Bright Spot">
           SDG 7 leads all goals with the highest average score in the sample. North African nations (Morocco, Egypt)
           have achieved near-universal electricity access, while East African countries are improving rapidly
           through off-grid solar and mini-grid expansion. Clean cooking access, however, remains severely lagged —
-          BURN Manufacturing's segment — with over 900 million Africans still relying on solid biomass.
+          with over 900 million Africans still relying on solid biomass.
         </InsightBox>
         <InsightBox color="var(--green)" icon="📚" title="Education Gains Are Sustained">
           SDG 4 primary completion rates have improved in nearly every sampled country since 2015. Rwanda stands
@@ -67,27 +177,24 @@ export default function Analysis() {
           significant strides from low baselines. Secondary and tertiary education quality gaps persist.
         </InsightBox>
         <InsightBox color="var(--yellow)" icon="🏥" title="Health Progress — Real But Fragile">
-          Under-5 mortality has declined continent-wide, and UHC coverage is expanding. But gains are uneven:
-          DR Congo records 84 deaths per 1,000 live births versus Morocco at 20. Maternal mortality remains
-          critically high in fragile states. The COVID-19 pandemic set back immunization programs in 2020–2022,
-          and full recovery is incomplete in lower-income countries.
+          Under-5 mortality has declined continent-wide and UHC coverage is expanding. But gains are uneven.
+          The COVID-19 pandemic set back immunization programs in 2020–2022, and full recovery is incomplete
+          in lower-income countries.
         </InsightBox>
         <InsightBox color="var(--red)" icon="🍽️" title="Hunger Is Getting Worse, Not Better">
           SDG 2 (Zero Hunger) is the most alarming regression. FAO data shows undernourishment rising in Eastern
-          and Central Africa — driven by climate shocks (floods and droughts amplified by El Niño), conflict
-          (Ethiopia, Sudan, DRC), and currency crises eroding food import capacity. Ethiopia and DRC are both
-          tracking in the wrong direction on this goal.
+          and Central Africa — driven by climate shocks, conflict, and currency crises eroding food import
+          capacity. Several countries are tracking in the wrong direction on this goal.
         </InsightBox>
         <InsightBox color="var(--red)" icon="🌡️" title="Climate Responsibility — A Profound Injustice">
           Africa contributes under 4% of global cumulative CO₂ emissions yet faces disproportionate climate
-          impacts. South Africa, as the continent's most industrialized economy, is the clear outlier at 6.84t
-          CO₂ per capita — largely coal-driven. The rest of Sub-Saharan Africa emits less per capita than any
-          other world region, yet faces the highest climate vulnerability. This makes SDG 13 partly a financing
-          and adaptation challenge, not an emissions reduction one, for most African countries.
+          impacts. South Africa, as the continent's most industrialized economy, is the clear outlier at high
+          per-capita emissions — largely coal-driven. For most African countries, SDG 13 is a financing
+          and adaptation challenge, not an emissions reduction one.
         </InsightBox>
       </div>
 
-      {/* Per-goal insight table */}
+      {/* Per-goal table */}
       <div className="card" style={{ padding: '20px', overflowX: 'auto' }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', marginBottom: '16px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
           Goal-by-Goal Snapshot
@@ -136,10 +243,10 @@ export default function Analysis() {
                   <td style={{ padding: '10px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <div style={{ width: '50px', height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ width: `${(improving / total) * 100}%`, height: '100%', background: 'var(--green)', borderRadius: '2px' }} />
+                        <div style={{ width: `${total ? (improving / total) * 100 : 0}%`, height: '100%', background: 'var(--green)', borderRadius: '2px' }} />
                       </div>
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--green)' }}>
-                        {((improving / total) * 100).toFixed(0)}%
+                        {total ? ((improving / total) * 100).toFixed(0) : 0}%
                       </span>
                     </div>
                   </td>
@@ -150,16 +257,13 @@ export default function Analysis() {
         </table>
       </div>
 
-      {/* Disclaimer */}
-      <div style={{
-        padding: '14px 18px', background: 'rgba(75,85,99,0.1)',
-        border: '1px solid var(--border)', borderRadius: '8px',
-        fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7,
-      }}>
-        <strong style={{ color: 'var(--text-secondary)' }}>Methodology Note:</strong> Analysis is based on
-        {' '}{countries.length} countries in the current sample. Scores represent distance to 2030 SDG targets
-        (0–100 scale). Data sourced from WHO, FAO, World Bank, UNESCO UIS, and UNFCCC — all under open/CC licenses.
-        This dashboard is for informational purposes only and is not affiliated with or endorsed by the United Nations.
+      {/* Methodology note */}
+      <div style={{ padding: '14px 18px', background: 'rgba(75,85,99,0.1)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+        <strong style={{ color: 'var(--text-secondary)' }}>Methodology Note:</strong>{' '}
+        Trend direction computed via linear regression on 8-year score series (2015–2023). A slope ≥ 0.8
+        score points/year = "improving"; ≤ −0.8 = "worsening"; between = "stable". Overall country score
+        is a simple average across tracked goals. Data: WHO, FAO, World Bank, UNESCO UIS, UNFCCC.
+        For informational purposes only. Not affiliated with the United Nations.
       </div>
     </div>
   )
