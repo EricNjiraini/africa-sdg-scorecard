@@ -2,106 +2,74 @@ import { SECTOR_STATS } from '../data/sdgData'
 
 export default function Header({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'overview',   label: '◉ Overview' },
-    { id: 'table',      label: '≡ Scorecard' },
-    { id: 'charts',     label: '⌗ Charts' },
-    { id: 'map',        label: '🗺 Map' },
-    { id: 'country',    label: '⊞ Country Deep-Dive' },
-    { id: 'analysis',   label: '◈ Analysis' },
-    { id: 'sources',    label: '⊙ Sources' },
+    { id: 'overview', label: 'Overview' },
+    { id: 'story',    label: 'About' },
+    { id: 'sdg17',    label: 'All 17 SDGs' },
+    { id: 'table',    label: 'Scorecard' },
+    { id: 'charts',   label: 'Charts' },
+    { id: 'map',      label: 'Map' },
+    { id: 'country',  label: 'Country' },
+    { id: 'analysis', label: 'Analysis' },
+    { id: 'sources',  label: 'Sources' },
   ]
 
   return (
-    <header style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
-      {/* Top bar */}
-      <div style={{
-        borderBottom: '1px solid var(--border)',
-        padding: '8px 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '11px',
-        fontFamily: 'var(--font-mono)',
-        color: 'var(--text-muted)',
-      }}>
-        <span style={{ color: 'var(--accent-cyan)' }}>● LIVE DATA</span>
-        <span>
-          {SECTOR_STATS.coveredCountries} countries tracked &nbsp;|&nbsp;
-          {SECTOR_STATS.goalsTracked} SDGs &nbsp;|&nbsp;
-          Data: {SECTOR_STATS.dataYear} &nbsp;|&nbsp;
-          Updated: {SECTOR_STATS.lastUpdated}
-        </span>
-        <span>FOR INFORMATIONAL PURPOSES ONLY</span>
-      </div>
-
-      {/* Title */}
-      <div style={{ padding: '20px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <header style={{
+      background: 'var(--bg-card)',
+      borderBottom: '1px solid var(--border)',
+      boxShadow: 'var(--shadow-sm)',
+      position: 'sticky', top: 0, zIndex: 50,
+    }}>
+      {/* Title row */}
+      <div style={{ padding: '16px 28px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
-            color: 'var(--accent-gold)',
-            letterSpacing: '3px',
-            textTransform: 'uppercase',
-            marginBottom: '6px',
-          }}>
-            Africa · SDG Progress Intelligence
+          {/* Coloured flag stripe */}
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+            {['#c2410c','#b45309','#16a34a','#0369a1','#7c3aed'].map(c => (
+              <div key={c} style={{ width: '20px', height: '3px', borderRadius: '2px', background: c }} />
+            ))}
           </div>
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(22px, 3vw, 32px)',
-            fontWeight: 800,
-            color: 'var(--text-primary)',
-            lineHeight: 1.1,
-            letterSpacing: '-0.5px',
-          }}>
-            Africa SDG Scorecard
-            <span style={{ color: 'var(--accent-cyan)', marginLeft: '10px', fontSize: '60%', fontWeight: 400 }}>
-              2015 → 2030
-            </span>
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>
-            Tracking 54 nations across 7 Sustainable Development Goals
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+              Africa SDG Scorecard
+            </h1>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>2015 → 2030</span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '3px' }}>
+            {SECTOR_STATS.coveredCountries} nations · {SECTOR_STATS.goalsTracked} tracked SDGs · Data {SECTOR_STATS.dataYear}
           </p>
         </div>
 
         {/* Quick stats */}
-        <div style={{ display: 'flex', gap: '24px', textAlign: 'right' }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', color: 'var(--green)', fontWeight: 700 }}>
-              {SECTOR_STATS.onTrackCount}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {[
+            { val: SECTOR_STATS.onTrackCount, label: 'On Track', color: 'var(--green)', bg: '#dcfce7' },
+            { val: SECTOR_STATS.atRiskCount,  label: 'At Risk',  color: 'var(--red)',   bg: '#fee2e2' },
+            { val: 2030,                       label: 'Deadline', color: 'var(--accent-gold)', bg: '#fef9c3' },
+          ].map(s => (
+            <div key={s.label} style={{ background: s.bg, borderRadius: 'var(--radius-sm)', padding: '8px 14px', textAlign: 'center', minWidth: '70px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.val}</div>
+              <div style={{ fontSize: '10px', color: s.color, marginTop: '2px', fontWeight: 600 }}>{s.label}</div>
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>On Track</div>
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', color: 'var(--red)', fontWeight: 700 }}>
-              {SECTOR_STATS.atRiskCount}
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>At Risk</div>
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', color: 'var(--accent-gold)', fontWeight: 700 }}>
-              2030
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Deadline</div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Nav tabs */}
-      <nav style={{ padding: '0 24px', display: 'flex', gap: '2px' }}>
+      {/* Nav */}
+      <nav style={{ padding: '0 28px', display: 'flex', gap: '2px', overflowX: 'auto' }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
-              padding: '10px 16px',
+              padding: '10px 14px',
               fontSize: '12px',
-              fontFamily: 'var(--font-mono)',
-              background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === tab.id ? 'var(--accent-cyan)' : 'var(--text-muted)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: activeTab === tab.id ? 700 : 500,
+              background: 'transparent',
+              color: activeTab === tab.id ? 'var(--accent-terra)' : 'var(--text-muted)',
               border: 'none',
-              borderTop: activeTab === tab.id ? `2px solid var(--accent-cyan)` : '2px solid transparent',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent-terra)' : '2px solid transparent',
               cursor: 'pointer',
               transition: 'all 0.15s',
               whiteSpace: 'nowrap',

@@ -81,7 +81,7 @@ function GoalCard({ goal, data }) {
       </div>
 
       {/* Progress bar */}
-      <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', marginBottom: '10px', overflow: 'hidden' }}>
+      <div style={{ height: '4px', background: 'var(--bg-inset)', borderRadius: '2px', marginBottom: '10px', overflow: 'hidden' }}>
         <div style={{ width: `${data.score}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
       </div>
 
@@ -221,7 +221,7 @@ export default function CountryDeepDive({ selectedCountry, setSelectedCountry })
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Distance to 2030 SDG target (0 → 100)</span>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{current.sdgScore}/100</span>
           </div>
-          <div style={{ height: '8px', background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{ height: '8px', background: 'var(--bg-inset)', borderRadius: '4px', overflow: 'hidden' }}>
             <div style={{
               width: `${current.sdgScore}%`, height: '100%', borderRadius: '4px',
               background: `linear-gradient(90deg, ${getStatusColor('red')}, ${getStatusColor(overallStatus)})`,

@@ -5,18 +5,18 @@ import {
 } from 'recharts'
 import { countries, SDG_GOALS, getStatusColor } from '../data/sdgData'
 
-const CHART_BG = '#070c14'
-const GRID_COLOR = '#1e3048'
-const TEXT_COLOR = '#7a99bb'
+const CHART_BG = '#f5f3ef'
+const GRID_COLOR = '#ddd9d2'
+const TEXT_COLOR = '#5c5650'
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
     <div style={{
-      background: '#111d2e', border: '1px solid #2a4060',
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: '6px', padding: '10px 14px', fontSize: '12px',
     }}>
-      <div style={{ color: '#e8f0fa', fontWeight: 700, marginBottom: '4px' }}>{label || payload[0]?.payload?.name}</div>
+      <div style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: '4px' }}>{label || payload[0]?.payload?.name}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color || '#7a99bb' }}>
           {p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</strong>
@@ -147,8 +147,8 @@ export default function Charts() {
                 if (!active || !payload?.length) return null
                 const d = payload[0]?.payload
                 return (
-                  <div style={{ background: '#111d2e', border: '1px solid #2a4060', borderRadius: '6px', padding: '10px 14px', fontSize: '12px' }}>
-                    <div style={{ color: '#e8f0fa', fontWeight: 700 }}>{d?.name}</div>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 14px', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{d?.name}</div>
                     <div style={{ color: TEXT_COLOR }}>SDG Score: <strong style={{ color: getStatusColor(d.status) }}>{d?.y}</strong></div>
                     <div style={{ color: TEXT_COLOR }}>Pop: ~{Math.round(Math.pow(10, d?.x) * 10) / 10}M</div>
                   </div>

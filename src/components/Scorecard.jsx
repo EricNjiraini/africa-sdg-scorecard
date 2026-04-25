@@ -101,8 +101,8 @@ export default function Scorecard({ setActiveTab, setSelectedCountry }) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
-            <tr style={{ background: 'var(--bg-secondary)' }}>
-              <th style={{ padding: '10px 14px', textAlign: 'left', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
+            <tr style={{ background: 'var(--bg-inset)' }}>
+              <th style={{ padding: '10px 14px', textAlign: 'left', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--bg-inset)', zIndex: 1 }}>
                 <SortBtn field="name" label="Country" />
               </th>
               <th style={{ padding: '10px 14px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
@@ -130,7 +130,7 @@ export default function Scorecard({ setActiveTab, setSelectedCountry }) {
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   onClick={() => { setSelectedCountry(c); setActiveTab('country') }}
                 >
-                  <td style={{ padding: '10px 14px', position: 'sticky', left: 0, background: 'var(--bg-primary)', zIndex: 1 }}>
+                  <td style={{ padding: '10px 14px', position: 'sticky', left: 0, background: 'var(--bg-inset)', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '16px' }}>{c.flag}</span>
                       <div>

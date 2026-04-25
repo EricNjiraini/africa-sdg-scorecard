@@ -1,12 +1,16 @@
 import { countries, SDG_GOALS, SECTOR_STATS, getStatusColor, getStatusLabel, computeRegionSummary } from '../data/sdgData'
 
-function StatCard({ label, value, sub, color }) {
+function StatCard({ label, value, sub, color, bg }) {
   return (
-    <div className="card" style={{ padding: '20px', minWidth: '140px' }}>
+    <div style={{
+      background: bg || 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-md)', padding: '18px 20px',
+      boxShadow: 'var(--shadow-sm)', minWidth: '140px', flex: 1,
+    }}>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
         {label}
       </div>
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color: color || 'var(--text-primary)', lineHeight: 1 }}>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '26px', fontWeight: 700, color: color || 'var(--text-primary)', lineHeight: 1 }}>
         {value}
       </div>
       {sub && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px' }}>{sub}</div>}
@@ -14,206 +18,212 @@ function StatCard({ label, value, sub, color }) {
   )
 }
 
-function StatusPill({ status }) {
-  return (
-    <span className={`tag-${status}`} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-      {getStatusLabel(status)}
-    </span>
-  )
-}
-
 function RankRow({ rank, country, onClick }) {
   const overall = country.sdgScore
   const status = overall >= 70 ? 'green' : overall >= 55 ? 'yellow' : overall >= 40 ? 'orange' : 'red'
-
   return (
     <div
       onClick={() => onClick(country)}
       style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '10px 14px', borderBottom: '1px solid var(--border)',
-        cursor: 'pointer', transition: 'background 0.15s',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '9px 14px', borderBottom: '1px solid var(--border)',
+        cursor: 'pointer', transition: 'background 0.12s',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-inset)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '11px', width: '20px', textAlign: 'right' }}>
-        {rank}
-      </span>
-      <span style={{ fontSize: '20px' }}>{country.flag}</span>
-      <span style={{ flex: 1, color: 'var(--text-primary)', fontSize: '13px' }}>{country.name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ width: '80px', height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${overall}%`, height: '100%', background: getStatusColor(status), borderRadius: '2px', transition: 'width 0.6s ease' }} />
-        </div>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: getStatusColor(status), width: '36px', textAlign: 'right' }}>
-          {overall}
-        </span>
+      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', fontSize: '11px', width: '18px', textAlign: 'right' }}>{rank}</span>
+      <span style={{ fontSize: '18px' }}>{country.flag}</span>
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>{country.name}</span>
+      <div style={{ width: '70px', height: '4px', background: 'var(--bg-inset)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ width: `${overall}%`, height: '100%', background: getStatusColor(status), borderRadius: '2px' }} />
       </div>
-      <StatusPill status={status} />
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: getStatusColor(status), width: '34px', textAlign: 'right', fontWeight: 700 }}>{overall}</span>
     </div>
   )
 }
 
 export default function Overview({ setActiveTab, setSelectedCountry }) {
   const sorted = [...countries].sort((a, b) => b.sdgScore - a.sdgScore)
-  const top5 = sorted.slice(0, 5)
+  const top5   = sorted.slice(0, 5)
   const bottom5 = sorted.slice(-5).reverse()
   const regionData = computeRegionSummary()
 
-  // Count statuses across all goals
-  const statusCounts = { green: 0, yellow: 0, orange: 0, red: 0 }
+  // Accurate status counts from real data
+  const statusCounts = { green: 0, yellow: 0, orange: 0, red: 0, grey: 0 }
+  let totalPairs = 0
   countries.forEach(c => {
     SDG_GOALS.forEach(g => {
       const s = c.goals[g.id]?.status
+      totalPairs++
       if (s && statusCounts[s] !== undefined) statusCounts[s]++
+      else statusCounts.grey++
     })
   })
 
-  const handleCountryClick = (country) => {
-    setSelectedCountry(country)
-    setActiveTab('country')
-  }
+  // Computed from real data — how many goals have majority-improving trend
+  const improvingGoals = SDG_GOALS.filter(g => {
+    const trends = countries.map(c => c.goals[g.id]?.trend).filter(Boolean)
+    const improving = trends.filter(t => t === 'improving').length
+    return improving > trends.length / 2
+  }).length
+
+  const handleCountryClick = (c) => { setSelectedCountry(c); setActiveTab('country') }
+
+  // Years left to 2030
+  const yearsLeft = 2030 - new Date().getFullYear()
 
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-      {/* Headline alert */}
+      {/* Hero banner — honest, human framing */}
       <div style={{
-        background: 'rgba(240,165,0,0.07)', border: '1px solid rgba(240,165,0,0.25)',
-        borderLeft: '4px solid var(--accent-gold)', borderRadius: '8px', padding: '16px 20px',
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-lg)', padding: '28px 32px',
+        boxShadow: 'var(--shadow-sm)',
+        borderLeft: '4px solid var(--accent-terra)',
       }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--accent-gold)', marginBottom: '4px' }}>
-          ⚠ SDG Deadline: 5 Years Remaining
+        <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-terra)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+              {yearsLeft} years to the deadline
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '22px', lineHeight: 1.25, marginBottom: '12px', color: 'var(--text-primary)' }}>
+              Africa's SDG journey is real —<br />
+              <span style={{ color: 'var(--accent-terra)' }}>but the pace must triple.</span>
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.75, marginBottom: '10px' }}>
+              Based on current trajectories across {SECTOR_STATS.coveredCountries} African nations,{' '}
+              <strong>{improvingGoals} of {SDG_GOALS.length} tracked goals</strong> show majority-improving trends.
+              Progress on child mortality and electricity access is measurable and real. But hunger is worsening
+              in several countries, poverty reduction has stalled, and climate vulnerability is rising.
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.7 }}>
+              This dashboard tracks <strong>{SDG_GOALS.length} SDGs</strong> where high-quality, country-level
+              open data exists — specifically from World Bank, WHO, FAO, UNESCO, and UNFCCC APIs.
+              The remaining 10 SDGs lack sufficient Africa-specific data for reliable scoring
+              and are surfaced in the <button onClick={() => setActiveTab('sdg17')} style={{ color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px', padding: 0 }}>All 17 SDGs panel →</button>
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '180px' }}>
+            {[
+              { label: 'Countries tracked', value: SECTOR_STATS.coveredCountries, sub: 'of 54 AU members', color: 'var(--accent-blue)', bg: '#eff6ff' },
+              { label: 'Goals improving', value: `${improvingGoals}/${SDG_GOALS.length}`, sub: 'majority of countries', color: 'var(--green)', bg: '#dcfce7' },
+              { label: 'Countries at risk', value: SECTOR_STATS.atRiskCount, sub: 'score below 50', color: 'var(--red)', bg: '#fee2e2' },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, borderRadius: 'var(--radius-sm)', padding: '12px 16px', border: `1px solid ${s.color}30` }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: s.color }}>{s.label}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '700px' }}>
-          Africa is making progress in 12 of the 17 SDGs, but the current pace is insufficient to achieve them by 2030.
-          Data gaps prevent a full picture — nearly 120 indicators lack sufficient country-level data across the continent.
-        </p>
       </div>
 
-      {/* Top stat cards */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <StatCard label="Countries Tracked" value={`${SECTOR_STATS.coveredCountries}`} sub={`of 54 AU members`} />
-        <StatCard label="SDGs Monitored" value={SECTOR_STATS.goalsTracked} sub="of 17 total goals" />
-        <StatCard label="On Track" value={SECTOR_STATS.onTrackCount} sub="score ≥ 70" color="var(--green)" />
-        <StatCard label="At Risk" value={SECTOR_STATS.atRiskCount} sub="score < 50" color="var(--red)" />
-        <StatCard label="Top Performer" value={SECTOR_STATS.topCountry?.flag} sub={SECTOR_STATS.topCountry?.name} color="var(--accent-cyan)" />
-        <StatCard label="Needs Most Support" value={SECTOR_STATS.bottomCountry?.flag} sub={SECTOR_STATS.bottomCountry?.name} color="var(--orange)" />
-      </div>
-
-      {/* Status breakdown */}
-      <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          Goal Status Breakdown — All Countries
-        </h3>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+      {/* Status breakdown — computed from actual data */}
+      <div className="card" style={{ padding: '22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '15px' }}>
+            Goal Status Breakdown
+          </h3>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            {countries.length} countries × {SDG_GOALS.length} goals = {totalPairs} data points
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           {[
-            { key: 'green',  label: 'On Track',   color: 'var(--green)' },
-            { key: 'yellow', label: 'Moderate',    color: 'var(--yellow)' },
-            { key: 'orange', label: 'At Risk',     color: 'var(--orange)' },
-            { key: 'red',    label: 'Off Track',   color: 'var(--red)' },
-          ].map(({ key, label, color }) => {
-            const total = Object.values(statusCounts).reduce((s, v) => s + v, 0)
-            const pct = ((statusCounts[key] / total) * 100).toFixed(0)
+            { key: 'green',  label: 'On Track',  color: 'var(--green)',  bg: '#dcfce7' },
+            { key: 'yellow', label: 'Moderate',  color: 'var(--yellow)', bg: '#fef9c3' },
+            { key: 'orange', label: 'At Risk',   color: 'var(--orange)', bg: '#ffedd5' },
+            { key: 'red',    label: 'Off Track', color: 'var(--red)',    bg: '#fee2e2' },
+            { key: 'grey',   label: 'No Data',   color: 'var(--grey)',   bg: '#f5f5f4' },
+          ].map(({ key, label, color, bg }) => {
+            const count = statusCounts[key]
+            const pct = totalPairs ? ((count / totalPairs) * 100).toFixed(0) : 0
             return (
-              <div key={key} style={{ flex: 1, minWidth: '120px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '12px', color }}>{label}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color }}>{pct}%</span>
-                </div>
-                <div style={{ height: '6px', background: 'var(--bg-primary)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '3px' }} />
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{statusCounts[key]} goal-country pairs</div>
+              <div key={key} style={{ flex: 1, minWidth: '120px', background: bg, borderRadius: 'var(--radius-sm)', padding: '14px', border: `1px solid ${color}30` }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', fontWeight: 700, color, lineHeight: 1 }}>{pct}%</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color, marginTop: '4px' }}>{label}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{count} pairs</div>
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* Rankings and Region */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-
-        {/* Top 5 */}
+      {/* Rankings */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '2px' }}>
-              ▲ Top Performers
-            </h3>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)' }} />
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px' }}>Top Performers</h3>
           </div>
           {top5.map((c, i) => <RankRow key={c.iso} rank={i + 1} country={c} onClick={handleCountryClick} />)}
         </div>
-
-        {/* Bottom 5 */}
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)' }}>
-            <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--red)', textTransform: 'uppercase', letterSpacing: '2px' }}>
-              ▼ Needs Most Support
-            </h3>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red)' }} />
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px' }}>Needs Most Support</h3>
           </div>
           {bottom5.map((c, i) => <RankRow key={c.iso} rank={countries.length - i} country={c} onClick={handleCountryClick} />)}
         </div>
+      </div>
 
-        {/* Region summary */}
-        <div className="card" style={{ padding: '14px' }}>
-          <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '12px' }}>
-            ⊞ By Region (Sample)
-          </h3>
+      {/* Region summary */}
+      <div className="card" style={{ padding: '22px' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '15px', marginBottom: '16px' }}>By Region</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
           {regionData.map(r => {
             const status = r.avgScore >= 70 ? 'green' : r.avgScore >= 55 ? 'yellow' : r.avgScore >= 40 ? 'orange' : 'red'
+            const bg = { green: '#dcfce7', yellow: '#fef9c3', orange: '#ffedd5', red: '#fee2e2' }[status]
             return (
-              <div key={r.region} style={{ marginBottom: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{r.region}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: getStatusColor(status) }}>
-                    {r.avgScore}
-                  </span>
-                </div>
-                <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div key={r.region} style={{ background: bg, borderRadius: 'var(--radius-sm)', padding: '14px 16px', border: `1px solid ${getStatusColor(status)}30` }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>{r.region}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '24px', fontWeight: 700, color: getStatusColor(status) }}>{r.avgScore}</div>
+                <div style={{ height: '4px', background: 'rgba(0,0,0,0.1)', borderRadius: '2px', margin: '8px 0 4px', overflow: 'hidden' }}>
                   <div style={{ width: `${r.avgScore}%`, height: '100%', background: getStatusColor(status), borderRadius: '2px' }} />
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.count} countries in sample</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{r.count} countries</div>
               </div>
             )
           })}
-          <div style={{ marginTop: '16px', padding: '10px', background: 'rgba(0,212,184,0.06)', border: '1px solid rgba(0,212,184,0.15)', borderRadius: '6px' }}>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              ℹ Sample covers {countries.length} of 54 countries. Full dataset expansion in progress.
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* SDG Goals grid */}
-      <div className="card" style={{ padding: '20px' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '16px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          Goals at a Glance
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+      {/* 7 Tracked SDG goals grid */}
+      <div className="card" style={{ padding: '22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '15px' }}>Tracked Goals at a Glance</h3>
+          <button onClick={() => setActiveTab('sdg17')} style={{ fontSize: '12px', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            View all 17 SDGs →
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
           {SDG_GOALS.map(goal => {
-            const allScores = countries.map(c => c.goals[goal.id]?.score).filter(Boolean)
-            const avg = allScores.length ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(0) : '—'
+            const scores = countries.map(c => c.goals[goal.id]?.score).filter(s => s !== undefined && s !== null)
+            const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(0) : null
             const avgStatus = avg >= 70 ? 'green' : avg >= 55 ? 'yellow' : avg >= 40 ? 'orange' : 'red'
+            const improving = countries.filter(c => c.goals[goal.id]?.trend === 'improving').length
             return (
               <div key={goal.id} style={{
-                padding: '14px', background: 'var(--bg-primary)', borderRadius: '6px',
-                border: `1px solid ${goal.color}30`,
-                borderLeft: `3px solid ${goal.color}`,
+                padding: '14px', borderRadius: 'var(--radius-sm)',
+                border: `1px solid ${goal.color}40`,
+                borderTop: `3px solid ${goal.color}`,
+                background: 'var(--bg-card)',
               }}>
-                <div style={{ fontSize: '18px', marginBottom: '6px' }}>{goal.icon}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: '2px' }}>SDG {goal.id}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>{goal.label}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '20px', fontWeight: 700, color: getStatusColor(avgStatus) }}>
-                  {avg}<span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
+                <div style={{ fontSize: '20px', marginBottom: '6px' }}>{goal.icon}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>SDG {goal.id}</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', lineHeight: 1.3 }}>{goal.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '22px', fontWeight: 700, color: getStatusColor(avgStatus) }}>
+                  {avg ?? '—'}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>avg across sample</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>avg · {improving} countries improving</div>
               </div>
             )
           })}
         </div>
       </div>
-
     </div>
   )
 }
