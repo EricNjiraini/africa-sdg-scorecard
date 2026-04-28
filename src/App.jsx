@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import Header from './components/Header'
 import Overview from './components/Overview'
 import Story from './components/Story'
@@ -45,6 +46,7 @@ export default function App() {
         <span>Africa SDG Scorecard · Built by Eric Njiraini · Nairobi, Kenya</span>
         <span>Data: WHO · FAO · World Bank · UNESCO · UNFCCC · Informational only · Not affiliated with the UN</span>
       </footer>
+      <Analytics />
     </div>
   )
 }
